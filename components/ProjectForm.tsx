@@ -6,6 +6,9 @@ import { ChangeEvent, FormEvent, useState } from "react";
 import FormField from "./FormField";
 import { categoryFilters } from "@/constants";
 import CustomMenu from "./CustomMenu";
+import Button from "./Button";
+import { createNewProject, fetchToken } from "@/lib/actions";
+import { useRouter } from "next/navigation";
 
 type Props = {
 	type: string;
@@ -13,8 +16,49 @@ type Props = {
 };
 
 const ProjectForm = ({ type, session }: Props) => {
-	const handleFormSubmit = (e: FormEvent) => {};
-	const handleChangeImage = (e: ChangeEvent<HTMLInputElement>) => {};
+	const router = useRouter();
+	const handleFormSubmit = async (e: FormEvent) => {
+		e.preventDefault();
+
+		setIsSubmitting(true);
+
+		const { token } = await fetchToken();
+
+		try {
+			if (type === "create") {
+				await createNewProject(form, session?.user?.id, token);
+
+				router.push("/");
+			}
+		} catch (error) {
+			console.log(error);
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	const handleChangeImage = (e: ChangeEvent<HTMLInputElement>) => {
+		e.preventDefault();
+
+		const file = e.target.files?.[0];
+
+		if (!file) return;
+
+		if (!file.type.includes("image")) {
+			return alert("Please upload an image file");
+		}
+
+		const reader = new FileReader();
+
+		reader.readAsDataURL(file);
+
+		reader.onload = () => {
+			const result = reader.result as string;
+
+			handleStateChange("image", result);
+		};
+	};
+
 	const handleStateChange = (fieldName: string, value: string) => {
 		setForm((prevState) => ({ ...prevState, [fieldName]: value }));
 	};
@@ -88,7 +132,16 @@ const ProjectForm = ({ type, session }: Props) => {
 			/>
 
 			<div className="flexStart w-full">
-				<button>Create</button>
+				<Button
+					title={
+						isSubmitting
+							? `${type === "create" ? "Creating" : "Editing"}`
+							: `${type === "create" ? "Create" : "Edit"}`
+					}
+					type="submit"
+					leftIcon={isSubmitting ? "" : "/plus.svg"}
+					isSubmitting={isSubmitting}
+				/>
 			</div>
 		</form>
 	);
